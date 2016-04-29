@@ -1,0 +1,146 @@
+<resources>
+    <!-- **************** Main Activity **************** -->
+
+    <!-- Main label -->
+    <string name="app_name">MyRuns4</string>
+    <string name="menu_settings">Settings</string>
+    <string name="map_heading">Map</string>
+
+    <!-- Toast for UI -->
+    <string name="ui_toast_save">Saved</string>
+    <string name="ui_toast_error">Error</string>
+    <string name="ui_toast_cancel">Entry discarded</string>
+
+    <!-- Tab Strings -->
+    <string name="ui_tab_start">START</string>
+    <string name="ui_tab_history">HISTORY</string>
+    <string name="ui_tab_settings">SETTINGS</string>
+
+    <!-- **************** Start Tab **************** -->
+
+    <!-- Text for UI-->
+    <string name="ui_input_type_title">Input Type</string>
+    <string name="ui_activity_type_title">Activity Type</string>
+
+    <!-- Buttons for UI -->
+    <string name="ui_start_button">START</string>
+    <string name="ui_sync_button">SYNC</string>
+
+    <!-- Spinners for UI -->
+    <string-array name="ui_input_type_spinner_list">
+        <item>Manual Entry</item>
+        <item>GPS</item>
+        <item>Automatic</item>
+    </string-array>
+
+    <string-array name="ui_activity_type_spinner_list">
+        <item>Running</item>
+        <item>Walking</item>
+        <item>Standing</item>
+        <item>Cycling</item>
+        <item>Hiking</item>
+        <item>Downhill Skiing</item>
+        <item>Cross-Country Skiing</item>
+        <item>Snowboarding</item>
+        <item>Skating</item>
+        <item>Swimming</item>
+        <item>Mountain Biking</item>
+        <item>Wheelchair</item>
+        <item>Elliptical</item>
+        <item>Other</item>
+    </string-array>
+
+
+    <!-- **************** Settings Tab **************** -->
+
+    <!-- Headings for UI-->
+    <string name="ui_account_pref_title">Account Preferences</string>
+    <string name="ui_additional_setting_title">Additional Settings</string>
+    <string name="ui_misc_title">Misc.</string>
+
+    <!-- Preference Text for UI-->
+    <string name="ui_pref_profile">Name, Email, Class, etc</string>
+    <string name="ui_pref_profile_comment">User Profile</string>
+
+    <string name="ui_pref_privacy">Privacy Setting</string>
+    <string name="ui_pref_privacy_comment">Posting your records anonymously</string>
+
+    <string name="ui_pref_unit">Unit Preference</string>
+    <string name="ui_pref_unit_comment">Select the units</string>
+    <string name="unit_preference">unit_preference</string>
+    <string name="unit_km">Kilometers</string>
+    <string name="unit_miles">Miles</string>
+
+    <string-array name="ui_unit_preference_entries">
+        <item>Metric (Kilometers)</item>
+        <item>Imperial (Miles)</item>
+    </string-array>
+
+    <string-array name="ui_unit_preference_entries_values">
+        <item>Kilometers</item>
+        <item>Miles</item>
+    </string-array>
+
+    <string name="ui_pref_comments">Comments</string>
+    <string name="ui_pref_comments_comment">Please enter your comments</string>
+
+    <string name="ui_pref_webpage">Webpage</string>
+    <string name="ui_pref_webpage_comment">cs.dartmouth.edu/~campbell/cs65/cs65.html</string>
+
+    <!-- **************** Dialog fragment for Manual Entry **************** -->
+
+    <string name="ui_manual_date">Date</string>
+    <string name="ui_manual_time">Time</string>
+    <string name="ui_manual_duration">Duration</string>
+    <string name="ui_manual_distance">Distance</string>
+    <string name="ui_manual_calories">Calories</string>
+    <string name="ui_manual_heartrate">Heart Rate</string>
+    <string name="ui_manual_comment">Comment</string>
+    <string name="ui_manual_comment_hint">How did it go? Notes here.</string>
+
+    <!-- **************** Text for display entry activity **************** -->
+    <string name="ui_display_input_type">Input Type</string>
+    <string name="ui_display_activity_type">Activity Type</string>
+    <string name="ui_display_datetime">Date and time</string>
+
+    <!-- **************** User Profile **************** -->
+
+    <!-- file names for images -->
+    <string name="profile_pict_filename">profile_pict.png</string>
+    <string name="temp_filename">temp.png</string>
+
+    <!-- constants for photo picker tag-->
+    <string name="photo_picker_tag">photo_picker_tag</string>
+
+    <!-- Text for UI-->
+    <string name="ui_profile_photo_title">Profile Photo:</string>
+    <string name="ui_name_title">Name</string>
+    <string name="ui_email_title">Email</string>
+    <string name="ui_phone_title">Phone</string>
+    <string name="ui_gender_title">Gender</string>
+    <string name="ui_male_title">Male</string>
+    <string name="ui_female_title">Female</string>
+    <string name="ui_class_title">Class</string>
+    <string name="ui_major_title">Major</string>
+
+    <!-- Buttons for UI -->
+    <string name="ui_change_button">CHANGE</string>
+    <string name="ui_save_button">SAVE</string>
+    <string name="ui_cancel_button">CANCEL</string>
+    <string name="ui_ok_button">OK</string>
+
+    <!-- EditView for UI -->
+    <string name="ui_edit_name">Your Name</string>
+    <string name="ui_edit_email">Your Email</string>
+    <string name="ui_edit_phone">Your Phone Number</string>
+    <string name="ui_edit_class">eg. 2012</string>
+    <string name="ui_edit_major">Your Major</string>
+
+    <!-- Constants for photo picker -->
+    <string name="ui_photo_picker">"Select profile image"</string>
+    <string-array name="ui_photo_picker_list">
+        <item>Take picture from camera</item>
+        <item>Take picture from gallery</item>
+    </string-array>
+
+</resources>
