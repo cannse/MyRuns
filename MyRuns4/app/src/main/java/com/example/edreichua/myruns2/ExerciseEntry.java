@@ -124,7 +124,7 @@ public class ExerciseEntry {
     }
 
     // Setter for Location List
-    public void setmLocationList(ArrayList<LatLng> mLocationList) { this.mLocationList = mLocationList; }
+    public void setmLocationList(ArrayList<LatLng> mLocationList) { this.mLocationList.addAll(mLocationList); }
 
     // Setter (adder) and Getter for Location List
     public void setmLocationList(LatLng mLatLng) { this.mLocationList.add(mLatLng); }
