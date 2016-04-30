@@ -11,6 +11,7 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.support.v4.app.FragmentActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -132,6 +133,12 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     @Override
     protected void onDestroy() {
+        Log.d("Testing", "start destroy");
+        Intent intent = new Intent();
+        intent.setAction(TrackingService.ACTION);
+        intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
+        sendBroadcast(intent);
+        Log.d("Testing", "destroyed");
         super.onDestroy();
     }
 
