@@ -10,7 +10,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
-import android.net.Uri;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -42,12 +41,16 @@ public class TrackingService extends Service {
         // Send Notification
         Context context = getApplicationContext();
         String notificationTitle = "MyRuns";
-        String notificationText = "Recording your path now!";
-        Intent resultIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.cs.dartmouth.edu/~campbell/cs65/cs65.html"));
+        String notificationText = "Recording your path now";
+
+        Intent resultIntent = new Intent(context, MapDisplayActivity.class);
+
+        resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        resultIntent.setAction(Intent.ACTION_MAIN);
+
         PendingIntent pendingIntent
-                = PendingIntent.getActivity(getBaseContext(),
-                0, resultIntent,
-                Intent.FLAG_ACTIVITY_NEW_TASK);
+                = PendingIntent.getActivity(context, 0, resultIntent, 0);
+        Log.d("Testing", "got herererere");
 
 
         Notification notification = new Notification.Builder(this)
