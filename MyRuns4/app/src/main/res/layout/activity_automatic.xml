@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="16dp"
+    android:paddingRight="16dp">
+
+    <!-- save or cancel section -->
+    <LinearLayout
+        android:id="@+id/button_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:layout_alignParentBottom="true">
+
+        <Button
+            android:id="@+id/button_save_auto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="40dp"
+            android:layout_weight="1"
+            android:onClick="selectAutoSave"
+            android:text="@string/ui_save_button" >
+        </Button>
+
+        <Button
+            android:id="@+id/button_cancel_auto"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="40dp"
+            android:layout_weight="1"
+            android:onClick="selectAutoCancel"
+            android:text="@string/ui_cancel_button" >
+        </Button>
+
+    </LinearLayout>
+
+</RelativeLayout>

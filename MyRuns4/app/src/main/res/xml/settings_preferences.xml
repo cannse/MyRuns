@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <!-- Account Preferences -->
+    <PreferenceCategory
+            android:title="@string/ui_account_pref_title">
+
+        <PreferenceScreen
+            android:title="@string/ui_pref_profile"
+            android:summary="@string/ui_pref_profile_comment">
+            <intent android:action="com.example.edreichua.myruns2.UserProfileActivity" />
+        </PreferenceScreen>
+
+        <CheckBoxPreference
+            android:key="privacy_setting_checkbox_preference"
+            android:title="@string/ui_pref_privacy"
+            android:summary="@string/ui_pref_privacy_comment" />
+    </PreferenceCategory>
+
+    <!-- Additional Settings -->
+    <PreferenceCategory
+        android:title="@string/ui_additional_setting_title">
+
+        <ListPreference
+            android:key="@string/unit_preference"
+            android:defaultValue="@string/unit_km"
+            android:title="@string/ui_pref_unit"
+            android:summary="@string/ui_pref_unit_comment"
+            android:entries="@array/ui_unit_preference_entries"
+            android:entryValues="@array/ui_unit_preference_entries_values"
+            android:dialogTitle="@string/ui_pref_unit" />
+
+        <EditTextPreference
+            android:key="comment_preference"
+            android:inputType="text"
+            android:title="@string/ui_pref_comments"
+            android:summary="@string/ui_pref_comments_comment" />
+
+    </PreferenceCategory>
+
+    <!-- Misc. -->
+    <PreferenceCategory
+        android:title="@string/ui_misc_title">
+
+        <PreferenceScreen
+            android:title="@string/ui_pref_webpage"
+            android:summary="@string/ui_pref_webpage_comment">
+            <intent android:action="android.intent.action.VIEW"
+                android:data="http://cs.dartmouth.edu/~campbell/cs65/cs65.html" />
+        </PreferenceScreen>
+
+    </PreferenceCategory>
+
+</PreferenceScreen>
