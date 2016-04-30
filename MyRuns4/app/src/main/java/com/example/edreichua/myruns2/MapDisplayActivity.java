@@ -102,12 +102,13 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     public void startService(){
 
-        Bundle bundle = getIntent().getExtras();
-        activityType = StartFragment.ID_TO_ACTIVITY[bundle.getInt(StartFragment.ACTIVITY_TYPE, 0)];
-        inputType = StartFragment.ID_TO_INPUT[bundle.getInt(StartFragment.INPUT_TYPE, 0)];
-
         Intent mIntent = new Intent(this, TrackingService.class);
-        mIntent.putExtras(bundle);
+        if(getParentActivityIntent() != null) {
+            Bundle bundle = getIntent().getExtras();
+            activityType = StartFragment.ID_TO_ACTIVITY[bundle.getInt(StartFragment.ACTIVITY_TYPE, 0)];
+            inputType = StartFragment.ID_TO_INPUT[bundle.getInt(StartFragment.INPUT_TYPE, 0)];
+            mIntent.putExtras(bundle);
+        }
         startService(mIntent);
     }
 
