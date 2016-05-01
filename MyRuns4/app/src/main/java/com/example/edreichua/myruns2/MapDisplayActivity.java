@@ -1,14 +1,13 @@
 package com.example.edreichua.myruns2;
 
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
-import android.location.Criteria;
-import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
@@ -23,11 +22,12 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 
+import java.util.ArrayList;
+
 /**
  * Created by edreichua on 4/22/16.
  */
 
-// Hi Sean
 public class MapDisplayActivity extends FragmentActivity implements ServiceConnection{
 
     // Variables dealing with the map
@@ -35,12 +35,21 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     public Marker startLoc;
 
     // Variables dealing with database
-    public ExerciseEntryDbHelper entry;
+    private ExerciseEntryDbHelper entryHelper;
+    private ExerciseEntry entry;
     private String activityType;
     private String inputType;
 
     // Variable dealing with service connection
     private ServiceConnection mConnection = this;
+    private TrackingService trackingService;
+    private Intent serviceIntent;
+
+    // Variables dealing with broadcast
+    final static String ACTION = "NotifyLocationUpdate";
+    final static String UPDATE_LOC_BROADCAST_KEY="UpdateBroadcastKey";
+    final static int RQS_UPDATE_LOC = 1;
+    UpdateLocationReceiver updateLocationReceiver;
 
     boolean mIsBound;
 
@@ -60,50 +69,54 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         // Set up the map
         setUpMapIfNeeded();
 
-        // Get the location
-        LocationManager locationManager;
-        String svcName= Context.LOCATION_SERVICE;
-        locationManager = (LocationManager)getSystemService(svcName);
-
-        // Set up criteria
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setPowerRequirement(Criteria.POWER_LOW);
-        criteria.setCostAllowed(true);
-        String provider = locationManager.getBestProvider(criteria, true);
-        criteria.setAltitudeRequired(false);
-        criteria.setBearingRequired(false);
-        criteria.setSpeedRequired(false);
-
-        // Find the latitude and longitude
-        Location l = locationManager.getLastKnownLocation(provider);
-        LatLng latlng = fromLocationToLatLng(l);
-
-        startLoc = mMap.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.defaultMarker(
-                BitmapDescriptorFactory.HUE_GREEN)));
-        // Zoom in
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
-                17));
-
-        updateWithNewLocation(l);
-
-        locationManager.requestLocationUpdates(provider, 2000, 10,
-                locationListener);
-
         // Start service
         startService();
+
+        // Start broadcast receiver
+        updateLocationReceiver = new UpdateLocationReceiver();
+        serviceIntent = new Intent(this, TrackingService.class);
 
         mIsBound = false;
 
         // Bind service
         bindService();
+//        Handler mHandler = new Handler();
+//        mHandler.postDelayed(new Runnable(){
+//            @Override
+//            public void run() {
+//                bindService();
+//            }
+//        }, 1);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         setUpMapIfNeeded();
+
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(ACTION);
+        registerReceiver(updateLocationReceiver, intentFilter);
     }
+
+    protected void onPause(){
+        unregisterReceiver(updateLocationReceiver);
+        super.onPause();
+    }
+
+    /////////////////////// Broadcast receiver ///////////////////////
+
+    public class UpdateLocationReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Log.d("Testing", "received");
+            getExerciseEntryFromService();
+            drawTraceOnMap();
+        }
+    }
+
+
 
     /////////////////////// Binding with Tracking Service ///////////////////////
 
@@ -123,19 +136,20 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
         if (TrackingService.isRunning()) {
 
-            bindService(new Intent(this, TrackingService.class), mConnection,
+            bindService(serviceIntent, mConnection,
                     Context.BIND_AUTO_CREATE);
             mIsBound = true;
+
         }
     }
 
     public void getExerciseEntryFromService(){
-
+        entry = trackingService.getExerciseEntry();
     }
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
-
+        trackingService =  ((TrackingService.TrackingBinder) service).getReference();
     }
 
     @Override
@@ -145,12 +159,18 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     @Override
     protected void onDestroy() {
+
+        // Destroy notification and tracking service
         Log.d("Testing", "start destroy");
         Intent intent = new Intent();
         intent.setAction(TrackingService.ACTION);
         intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
         sendBroadcast(intent);
         Log.d("Testing", "destroyed");
+
+        // Destroy broadcast receiver
+        //this.unregisterReceiver(updateLocationReceiver);
+
         super.onDestroy();
     }
 
@@ -175,20 +195,16 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     }
 
 
-    /////////////////////// Updating location functionality ///////////////////////
-
-    public static LatLng fromLocationToLatLng(Location location){
-        return new LatLng(location.getLatitude(), location.getLongitude());
-
-    }
-
-    private void updateWithNewLocation(Location location) {
-        updateStat();
-
-
-    }
-
     public void drawTraceOnMap(){
+
+        if(entry.getmLocationList().size() == 1) {
+            LatLng latlng = entry.getmLocationList().get(0);
+            startLoc = mMap.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.defaultMarker(
+                    BitmapDescriptorFactory.HUE_GREEN)));
+            // Zoom in
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
+                    17));
+        }
 
     }
 
@@ -197,10 +213,6 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     /////////////////////// Updating stats functionality ///////////////////////
 
-
-    public void onMessageRecv(){
-
-    }
 
     public void saveEntryToDb(){
 
@@ -307,18 +319,6 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         return "Distance: "+String.format("%.2f", distance)+" "+unitPref;
     }
 
-    /**
-     * Set up location listener
-     */
-    private final LocationListener locationListener = new LocationListener() {
-        public void onLocationChanged(Location location) {
-            updateWithNewLocation(location);
-        }
-        public void onProviderDisabled(String provider) {}
-        public void onProviderEnabled(String provider) {}
-        public void onStatusChanged(String provider, int status,
-                                    Bundle extras) {}
-    };
 
 
     /////////////////////// Map functionality ///////////////////////

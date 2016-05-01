@@ -154,7 +154,11 @@ public class MyRunsDialogFragment extends DialogFragment {
                                 setmDuration(!value.equals("") ? valueInSeconds : 0);
                         break;
                     case "Distance":
-                        double val = Double.parseDouble(value);
+                        double val;
+                        if(!value.equals(""))
+                            val = Double.parseDouble(value);
+                        else
+                            val = 0;
 
                         // Find unit
                         SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(getActivity());

@@ -6,7 +6,9 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
+import com.google.gson.*;
 
+import java.sql.Blob;
 import java.util.ArrayList;
 
 /**
@@ -92,6 +94,9 @@ public class ExerciseEntryDbHelper extends SQLiteOpenHelper {
         //values.put(KEY_CLIMB,entry.getmClimb());
         values.put(KEY_HEARTRATE,entry.getmHeartRate());
         values.put(KEY_COMMENT,entry.getmComment());
+
+        Gson gson = new Gson();
+        values.put(KEY_GPS_DATA,gson.toJson(entry.getmLocationList()));
 
         // Insert to database
         SQLiteDatabase database = getWritableDatabase();

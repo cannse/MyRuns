@@ -26,6 +26,7 @@ public class ExerciseEntry {
     public void ExerciseEntry(){
         mInputType = 0;
         mActivityType = 0;
+        mLocationList = new ArrayList<>();
     }
     // Setter and Getter for id
     public void setmId(long id) {
@@ -123,11 +124,9 @@ public class ExerciseEntry {
         return mComment;
     }
 
-    // Setter for Location List
-    public void setmLocationList(ArrayList<LatLng> mLocationList) { this.mLocationList.addAll(mLocationList); }
-
-    // Setter (adder) and Getter for Location List
-    public void setmLocationList(LatLng mLatLng) { this.mLocationList.add(mLatLng); }
+    // Setter and Getter for Location List
+    public void setmLocationList(ArrayList<LatLng> mLocationList) { this.mLocationList = mLocationList; }
+    public void addmLocationList(LatLng mLatLng) { mLocationList.add(mLatLng); }
     public ArrayList<LatLng> getmLocationList() { return mLocationList; }
 
     // Will be used by the ArrayAdapter in the ListView

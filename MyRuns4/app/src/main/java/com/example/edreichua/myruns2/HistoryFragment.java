@@ -161,9 +161,11 @@ public class HistoryFragment extends ListFragment implements
 
         @Override
         public void notifyDataSetChanged(){
-            List<ExerciseEntry> list = MainActivity.DBhelper.fetchEntries();
-            adapter = new HistoryAdapter(getActivity(),list);
-            setListAdapter(adapter);
+            if(MainActivity.DBhelper != null) {
+                List<ExerciseEntry> list = MainActivity.DBhelper.fetchEntries();
+                adapter = new HistoryAdapter(getActivity(), list);
+                setListAdapter(adapter);
+            }
             super.notifyDataSetChanged();
         }
 
