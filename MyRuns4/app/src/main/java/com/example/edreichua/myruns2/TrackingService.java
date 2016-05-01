@@ -15,6 +15,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Binder;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -29,46 +30,73 @@ public class TrackingService extends Service implements LocationListener {
 
     // Location manager
     LocationManager locationManager;
+    String provider;
 
     // Notification
     NotifyServiceReceiver notifyServiceReceiver;
-    public ExerciseEntry entry = new ExerciseEntry();
     final static String ACTION = "NotifyServiceAction";
     final static String STOP_SERVICE_BROADCAST_KEY="StopServiceBroadcastKey";
     final static int RQS_STOP_SERVICE = 1;
     private static boolean isRunning = false;
 
     //create an instance of TrackingBinder class
-    private Context context;
     private TrackingBinder trackingBinder = new TrackingBinder();
+
+    // Database
+    private ExerciseEntry entry;
+    private ArrayList<LatLng> locList;
 
 
     @Override
     public void onCreate() {
+
+        // Set up exercise entry
+        initExerciseEntry();
+
+        // Set up receiver
         Log.d("Testing", "tracking service is created");
         notifyServiceReceiver = new NotifyServiceReceiver();
         isRunning = true;
-        context = this;
-        initExerciseEntry();
 
         Log.d("Testing", "tracking service created");
-
         super.onCreate();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
 
+        // Set up location manager
         String svcName= Context.LOCATION_SERVICE;
         locationManager = (LocationManager)getSystemService(svcName);
-        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0,
-                this);
-        Log.d("Testing","Location manager created");
 
+        // Set up criteria
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE);
+        criteria.setPowerRequirement(Criteria.POWER_LOW);
+        criteria.setAltitudeRequired(false);
+        criteria.setBearingRequired(false);
+        criteria.setSpeedRequired(false);
+        criteria.setCostAllowed(true);
+        provider = locationManager.getBestProvider(criteria, true);
+
+        // Get most recent location
+        Handler mHandler = new Handler();
+        mHandler.postDelayed(new Runnable() {
+            public void run() {
+                Location l = locationManager.getLastKnownLocation(provider);
+                startLocationUpdates(l);
+            }
+        }, 1);
+
+        // Request for locations
+        locationManager.requestLocationUpdates(provider, 5, 1,
+                this);
+        Log.d("Testing", "Location manager created");
+
+        // Set up notification
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION);
         registerReceiver(notifyServiceReceiver, intentFilter);
-
         setUpNotification();
 
         return super.onStartCommand(intent, flags, startId);
@@ -85,6 +113,7 @@ public class TrackingService extends Service implements LocationListener {
 
     @Override
     public IBinder onBind(Intent intent) {
+
         return trackingBinder;
     }
 
@@ -107,9 +136,7 @@ public class TrackingService extends Service implements LocationListener {
         resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         resultIntent.setAction(Intent.ACTION_MAIN);
 
-
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resultIntent, 0);
-
 
         Notification notification = new Notification.Builder(this)
                 .setContentTitle(notificationTitle)
@@ -120,12 +147,13 @@ public class TrackingService extends Service implements LocationListener {
         notification.flags = notification.flags
                 | Notification.FLAG_ONGOING_EVENT;
 
-
         notificationManager.notify(0, notification);
     }
 
     public void initExerciseEntry(){
         entry = new ExerciseEntry();
+        locList = new ArrayList<LatLng>();
+        entry.setmLocationList(locList);
     }
 
     public ExerciseEntry getExerciseEntry(){
@@ -135,18 +163,14 @@ public class TrackingService extends Service implements LocationListener {
     public void startLocationUpdates(Location location){
         if (location != null) {
             LatLng mLatLng = fromLocationToLatLng(location);
-            ArrayList<LatLng> arr = new ArrayList<LatLng>();
-            arr.add(mLatLng);
-            entry.setmLocationList(arr);
-
+            entry.addmLocationList(mLatLng);
             Intent intent = new Intent();
             intent.setAction(MapDisplayActivity.ACTION);
             intent.putExtra(MapDisplayActivity.UPDATE_LOC_BROADCAST_KEY,
                     MapDisplayActivity.RQS_UPDATE_LOC);
-            this.context.sendBroadcast(intent);
+            sendBroadcast(intent);
             Log.d("Testing", "sent broadcast");
         }
-
     }
 
     public void startActivityUpdate(){
@@ -173,11 +197,9 @@ public class TrackingService extends Service implements LocationListener {
     public class NotifyServiceReceiver extends BroadcastReceiver {
 
         @Override
-        public void onReceive(Context arg0, Intent arg1) {
-            // TODO Auto-generated method stub
-            int rqs = arg1.getIntExtra(STOP_SERVICE_BROADCAST_KEY, 0);
-
-            if (rqs == RQS_STOP_SERVICE){
+        public void onReceive(Context context, Intent intent) {
+            int req = intent.getIntExtra(STOP_SERVICE_BROADCAST_KEY, 0);
+            if (req == RQS_STOP_SERVICE){
                 Log.d("Testing", "service stopped");
                 stopSelf();
                 ((NotificationManager) getSystemService(NOTIFICATION_SERVICE))

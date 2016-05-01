@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.graphics.Color;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
@@ -22,6 +23,7 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
 
@@ -33,7 +35,7 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     // Variables dealing with the map
     private GoogleMap mMap;
-    public Marker startLoc;
+    public Marker startLoc, endLoc;
 
     // Variables dealing with database
     private ExerciseEntryDbHelper entryHelper;
@@ -77,16 +79,9 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         updateLocationReceiver = new UpdateLocationReceiver();
         serviceIntent = new Intent(this, TrackingService.class);
 
-        mIsBound = false;
-
         // Bind service
-
-        Handler mHandler = new Handler();
-        mHandler.postDelayed(new Runnable() {
-            public void run() {
-                bindService();
-            }
-        }, 1);
+        mIsBound = false;
+        bindService();
     }
 
     @Override
@@ -110,9 +105,11 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
         @Override
         public void onReceive(Context context, Intent intent) {
-            Log.d("Testing", "received");
-            getExerciseEntryFromService();
-            drawTraceOnMap();
+            if (trackingService != null ) {
+                Log.d("Testing", "received");
+                getExerciseEntryFromService();
+                drawTraceOnMap();
+            }
         }
     }
 
@@ -132,33 +129,37 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         startService(mIntent);
     }
 
-    private void automaticBind() {
-        if (TrackingService.isRunning()) {
-            bindService();
-        }
-    }
 
     public void bindService(){
 
-        Log.d("Testing", "TrackingService.isRunning(): " + TrackingService.isRunning());
-        bindService(new Intent(this, TrackingService.class), mConnection,
-                Context.BIND_AUTO_CREATE);
-        mIsBound = true;
-        Log.d("Testing", "mIsBound: " + mIsBound);
+        if(!mIsBound) {
+            bindService(this.serviceIntent, mConnection,
+                    Context.BIND_AUTO_CREATE);
+            mIsBound = true;
+            Log.d("Testing", "Binding: " + mIsBound);
+        }
     }
 
-    public void getExerciseEntryFromService(){
-        entry = trackingService.getExerciseEntry();
+    public void unbindService(){
+
+        if(mIsBound) {
+            unbindService(this.mConnection);
+            mIsBound = false;
+            Log.d("Testing", "Unbinding: " + mIsBound);
+        }
     }
+
 
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         trackingService =  ((TrackingService.TrackingBinder) service).getReference();
+        Log.d("Testing", "Service connected");
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-
+        stopService(serviceIntent);
+        trackingService = null;
     }
 
     @Override
@@ -173,7 +174,10 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         Log.d("Testing", "destroyed");
 
         // Destroy broadcast receiver
-        //this.unregisterReceiver(updateLocationReceiver);
+        if(trackingService != null){
+            unbindService();
+            stopService(serviceIntent);
+        }
 
         super.onDestroy();
     }
@@ -219,6 +223,24 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
             // Zoom in
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
                     17));
+        }else{
+
+            // Draw polyline
+            PolylineOptions polylineOptions = new PolylineOptions();
+            polylineOptions.color(Color.BLACK);
+            polylineOptions.width(5);
+            ArrayList<LatLng> latLngList = entry.getmLocationList();
+            polylineOptions.addAll(latLngList);
+            mMap.addPolyline(polylineOptions);
+
+            // Remove the end marker
+            if(endLoc != null){
+                endLoc.remove();
+            }
+
+            // Draw the end marker
+            endLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(latLngList.size()-1))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
         }
 
     }
@@ -228,6 +250,10 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     /////////////////////// Updating stats functionality ///////////////////////
 
+
+    public void getExerciseEntryFromService(){
+        entry = trackingService.getExerciseEntry();
+    }
 
     public void saveEntryToDb(){
 
