@@ -42,6 +42,8 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     // Variable dealing with service connection
     private ServiceConnection mConnection = this;
 
+    boolean mIsBound;
+
     /////////////////////// Override core functionality ///////////////////////
 
     /**
@@ -90,6 +92,11 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
         // Start service
         startService();
+
+        mIsBound = false;
+
+        // Bind service
+        bindService();
     }
 
     @Override
@@ -114,9 +121,12 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     public void bindService(){
 
-        bindService(new Intent(this, TrackingService.class), mConnection,
-                Context.BIND_AUTO_CREATE);
+        if (TrackingService.isRunning()) {
 
+            bindService(new Intent(this, TrackingService.class), mConnection,
+                    Context.BIND_AUTO_CREATE);
+            mIsBound = true;
+        }
     }
 
     public void getExerciseEntryFromService(){

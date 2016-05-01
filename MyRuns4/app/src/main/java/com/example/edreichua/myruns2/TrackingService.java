@@ -24,11 +24,15 @@ public class TrackingService extends Service {
     final static String STOP_SERVICE_BROADCAST_KEY="StopServiceBroadcastKey";
     final static int RQS_STOP_SERVICE = 1;
 
+    private static boolean isRunning = false;
+
+
     NotifyServiceReceiver notifyServiceReceiver;
 
     @Override
     public void onCreate() {
         notifyServiceReceiver = new NotifyServiceReceiver();
+        isRunning = true;
         super.onCreate();
     }
 
@@ -76,6 +80,7 @@ public class TrackingService extends Service {
     @Override
     public void onDestroy() {
 //        this.unregisterReceiver(notifyServiceReceiver);
+        isRunning = false;
         super.onDestroy();
     }
 
@@ -108,6 +113,10 @@ public class TrackingService extends Service {
 
     public void notifyChange(){
 
+    }
+
+    public static boolean isRunning() {
+        return isRunning;
     }
 
 
