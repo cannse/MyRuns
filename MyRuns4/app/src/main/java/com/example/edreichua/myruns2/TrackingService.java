@@ -31,6 +31,7 @@ public class TrackingService extends Service {
 
     @Override
     public void onCreate() {
+        Log.d("Testing", "tracking service is created");
         notifyServiceReceiver = new NotifyServiceReceiver();
         isRunning = true;
         super.onCreate();
@@ -52,9 +53,7 @@ public class TrackingService extends Service {
         resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         resultIntent.setAction(Intent.ACTION_MAIN);
 
-        PendingIntent pendingIntent
-                = PendingIntent.getActivity(context, 0, resultIntent, 0);
-        Log.d("Testing", "got herererere");
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resultIntent, 0);
 
 
         Notification notification = new Notification.Builder(this)
@@ -65,7 +64,7 @@ public class TrackingService extends Service {
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notification.flags = notification.flags
                 | Notification.FLAG_ONGOING_EVENT;
-        notification.flags |= Notification.FLAG_AUTO_CANCEL;
+//        notification.flags |= Notification.FLAG_AUTO_CANCEL;
 
         notificationManager.notify(0, notification);
 
@@ -74,6 +73,7 @@ public class TrackingService extends Service {
 
     @Override
     public IBinder onBind(Intent intent) {
+        Log.d("Testing", "tracking service is bound");
         return null;
     }
 

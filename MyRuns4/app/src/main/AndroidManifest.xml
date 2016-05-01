@@ -59,7 +59,7 @@
         </activity>
 
         <activity android:name=".MapDisplayActivity"
-            android:launchMode="singleInstance"
+            android:launchMode="singleTop"
             android:label="@string/map_heading">
             <intent-filter>
                 <action android:name="com.example.edreichua.myruns2.MapDisplayActivity" />

@@ -9,6 +9,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
@@ -27,7 +28,6 @@ import com.google.android.gms.maps.model.MarkerOptions;
  * Created by edreichua on 4/22/16.
  */
 
-// Hi Sean
 public class MapDisplayActivity extends FragmentActivity implements ServiceConnection{
 
     // Variables dealing with the map
@@ -96,7 +96,13 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         mIsBound = false;
 
         // Bind service
-        bindService();
+        Handler mHandler = new Handler();
+        mHandler.postDelayed(new Runnable() {
+            public void run() {
+                bindService();
+            }
+        }, 1);
+
     }
 
     @Override
@@ -119,14 +125,19 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         startService(mIntent);
     }
 
+    private void automaticBind() {
+        if (TrackingService.isRunning()) {
+            bindService();
+        }
+    }
+
     public void bindService(){
 
-        if (TrackingService.isRunning()) {
-
-            bindService(new Intent(this, TrackingService.class), mConnection,
-                    Context.BIND_AUTO_CREATE);
-            mIsBound = true;
-        }
+        Log.d("Testing", "TrackingService.isRunning(): " + TrackingService.isRunning());
+        bindService(new Intent(this, TrackingService.class), mConnection,
+                Context.BIND_AUTO_CREATE);
+        mIsBound = true;
+        Log.d("Testing", "mIsBound: " + mIsBound);
     }
 
     public void getExerciseEntryFromService(){
@@ -184,8 +195,6 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     private void updateWithNewLocation(Location location) {
         updateStat();
-
-
     }
 
     public void drawTraceOnMap(){
