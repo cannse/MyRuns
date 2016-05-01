@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -79,14 +80,13 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         mIsBound = false;
 
         // Bind service
-        bindService();
-//        Handler mHandler = new Handler();
-//        mHandler.postDelayed(new Runnable(){
-//            @Override
-//            public void run() {
-//                bindService();
-//            }
-//        }, 1);
+
+        Handler mHandler = new Handler();
+        mHandler.postDelayed(new Runnable() {
+            public void run() {
+                bindService();
+            }
+        }, 1);
     }
 
     @Override
@@ -132,15 +132,19 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         startService(mIntent);
     }
 
+    private void automaticBind() {
+        if (TrackingService.isRunning()) {
+            bindService();
+        }
+    }
+
     public void bindService(){
 
-        if (TrackingService.isRunning()) {
-
-            bindService(serviceIntent, mConnection,
-                    Context.BIND_AUTO_CREATE);
-            mIsBound = true;
-
-        }
+        Log.d("Testing", "TrackingService.isRunning(): " + TrackingService.isRunning());
+        bindService(new Intent(this, TrackingService.class), mConnection,
+                Context.BIND_AUTO_CREATE);
+        mIsBound = true;
+        Log.d("Testing", "mIsBound: " + mIsBound);
     }
 
     public void getExerciseEntryFromService(){
@@ -194,6 +198,17 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         finish();
     }
 
+
+    /////////////////////// Updating location functionality ///////////////////////
+
+    public static LatLng fromLocationToLatLng(Location location){
+        return new LatLng(location.getLatitude(), location.getLongitude());
+
+    }
+
+    private void updateWithNewLocation(Location location) {
+        updateStat();
+    }
 
     public void drawTraceOnMap(){
 

@@ -45,6 +45,7 @@ public class TrackingService extends Service implements LocationListener {
 
     @Override
     public void onCreate() {
+        Log.d("Testing", "tracking service is created");
         notifyServiceReceiver = new NotifyServiceReceiver();
         isRunning = true;
         context = this;
@@ -106,8 +107,9 @@ public class TrackingService extends Service implements LocationListener {
         resultIntent.addCategory(Intent.CATEGORY_LAUNCHER);
         resultIntent.setAction(Intent.ACTION_MAIN);
 
-        PendingIntent pendingIntent
-                = PendingIntent.getActivity(context, 0, resultIntent, 0);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, resultIntent, 0);
+
 
         Notification notification = new Notification.Builder(this)
                 .setContentTitle(notificationTitle)
@@ -117,6 +119,7 @@ public class TrackingService extends Service implements LocationListener {
                 (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         notification.flags = notification.flags
                 | Notification.FLAG_ONGOING_EVENT;
+
 
         notificationManager.notify(0, notification);
     }
