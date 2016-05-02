@@ -33,6 +33,7 @@ public class HistoryFragment extends ListFragment implements
 
     // Constant tag for position
     public static final String ROW_INDEX = "Row_Index";
+    public static final String FROM_HISTORY = "From_History";
 
 
     /////////////////////// Override onCreate ///////////////////////
@@ -75,13 +76,20 @@ public class HistoryFragment extends ListFragment implements
     public void onListItemClick(ListView parent, View v, int position, long id) {
         super.onListItemClick(parent, v, position, id);
 
-        Intent mIntent = new Intent(getActivity(), DisplayEntryActivity.class);
-
         // Find the row id by accessing the value in the invisible row
         TextView tv = (TextView) v.findViewById(R.id.rowid);
         long rowid = Long.parseLong(tv.getText().toString());
-        mIntent.putExtra(ROW_INDEX, rowid);
+        ExerciseEntry entry = MainActivity.DBhelper.fetchEntryByIndex(rowid);
 
+        Intent mIntent;
+        if(entry.getmInputType() == StartFragment.INPUT_TO_ID_MAP.get(StartFragment.MANUAL_ENTRY)){
+            mIntent = new Intent(getActivity(), DisplayEntryActivity.class);
+        }else{
+            mIntent = new Intent(getActivity(), MapDisplayActivity.class);
+        }
+
+        mIntent.putExtra(FROM_HISTORY,true);
+        mIntent.putExtra(ROW_INDEX, rowid);
         getActivity().startActivity(mIntent);
     }
 
@@ -161,9 +169,11 @@ public class HistoryFragment extends ListFragment implements
 
         @Override
         public void notifyDataSetChanged(){
-            List<ExerciseEntry> list = MainActivity.DBhelper.fetchEntries();
-            adapter = new HistoryAdapter(getActivity(),list);
-            setListAdapter(adapter);
+            if(MainActivity.DBhelper != null) {
+                List<ExerciseEntry> list = MainActivity.DBhelper.fetchEntries();
+                adapter = new HistoryAdapter(getActivity(), list);
+                setListAdapter(adapter);
+            }
             super.notifyDataSetChanged();
         }
 
@@ -224,9 +234,9 @@ public class HistoryFragment extends ListFragment implements
     }
 
     // Convert the duration from seconds to the proper format
-    public static String formatDuration(int duration) {
-        int minutes = duration/60;
-        int seconds = duration%60;
+    public static String formatDuration(double duration) {
+        int minutes = (int)(duration/60);
+        int seconds = (int)(duration%60);
         if (minutes == 0 && seconds == 0) return "0secs";
         return String.valueOf(minutes) + "min " + String.valueOf(seconds) + "secs";
     }
