@@ -1,20 +1,27 @@
 package com.example.edreichua.myruns2;
 
+import android.content.AsyncTaskLoader;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.location.Location;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
+import android.preference.PreferenceManager;
 import android.support.v4.app.FragmentActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -26,6 +33,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by edreichua on 4/22/16.
@@ -35,7 +43,9 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     // Variables dealing with the map
     private GoogleMap mMap;
-    public Marker startLoc, endLoc;
+    private Marker startLoc, endLoc;
+    private double currSpeed;
+    public final static String CURR_SPEED = "CurrentSpeed";
 
     // Variables dealing with database
     private ExerciseEntryDbHelper entryHelper;
@@ -49,12 +59,16 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     private Intent serviceIntent;
 
     // Variables dealing with broadcast
-    final static String ACTION = "NotifyLocationUpdate";
-    final static String UPDATE_LOC_BROADCAST_KEY="UpdateBroadcastKey";
-    final static int RQS_UPDATE_LOC = 1;
-    UpdateLocationReceiver updateLocationReceiver;
+    public final static String ACTION = "NotifyLocationUpdate";
+    public final static String UPDATE_LOC_BROADCAST_KEY="UpdateBroadcastKey";
+    public final static int RQS_UPDATE_LOC = 1;
+    private UpdateLocationReceiver updateLocationReceiver;
+    private boolean mIsBound;
 
-    boolean mIsBound;
+    // Variables dealing with history
+    public final static String NOT_DRAWN = "NotDrawn";
+    private boolean isHistory, notDrawn, updateMap;
+    private long rowId;
 
     /////////////////////// Override core functionality ///////////////////////
 
@@ -72,16 +86,50 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         // Set up the map
         setUpMapIfNeeded();
 
-        // Start service
-        startService();
+        // Get Bundle
+        Bundle bundle;
+        if(savedInstanceState == null) {
+            bundle = getIntent().getExtras();
+        }else{
+            bundle = savedInstanceState;
+            updateMap = true;
+        }
 
-        // Start broadcast receiver
-        updateLocationReceiver = new UpdateLocationReceiver();
-        serviceIntent = new Intent(this, TrackingService.class);
+        isHistory = bundle.getBoolean(HistoryFragment.FROM_HISTORY,false);
+        rowId = bundle.getLong(HistoryFragment.ROW_INDEX, 0);
+        notDrawn = bundle.getBoolean(NOT_DRAWN,true);
 
-        // Bind service
-        mIsBound = false;
-        bindService();
+        if(!isHistory) {
+            // Start service
+            startService();
+
+            // Start broadcast receiver
+            updateLocationReceiver = new UpdateLocationReceiver();
+
+            // Bind service
+            mIsBound = false;
+            bindService();
+
+        }else{
+            // Remove button
+            (findViewById(R.id.button_save_gps)).setVisibility(View.GONE);
+            (findViewById(R.id.button_cancel_gps)).setVisibility(View.GONE);
+
+            // Retrieve entry
+            entry = MainActivity.DBhelper.fetchEntryByIndex(rowId);
+
+            // Draw trace and update stats
+            drawHistoryOnMap();
+            updateStat();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean(HistoryFragment.FROM_HISTORY, isHistory);
+        outState.putLong(HistoryFragment.ROW_INDEX, rowId);
+        outState.putBoolean(NOT_DRAWN, notDrawn);
     }
 
     @Override
@@ -89,13 +137,17 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         super.onResume();
         setUpMapIfNeeded();
 
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(ACTION);
-        registerReceiver(updateLocationReceiver, intentFilter);
+        if(!isHistory) {
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(ACTION);
+            registerReceiver(updateLocationReceiver, intentFilter);
+        }
     }
 
     protected void onPause(){
-        unregisterReceiver(updateLocationReceiver);
+        if(!isHistory) {
+            unregisterReceiver(updateLocationReceiver);
+        }
         super.onPause();
     }
 
@@ -108,7 +160,9 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
             if (trackingService != null ) {
                 Log.d("Testing", "received");
                 getExerciseEntryFromService();
+                currSpeed = intent.getFloatExtra(CURR_SPEED,0);
                 drawTraceOnMap();
+                updateStat();
             }
         }
     }
@@ -118,15 +172,14 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     /////////////////////// Binding with Tracking Service ///////////////////////
 
     public void startService(){
-
-        Intent mIntent = new Intent(this, TrackingService.class);
+        serviceIntent = new Intent(this, TrackingService.class);
         if(getParentActivityIntent() != null) {
             Bundle bundle = getIntent().getExtras();
             activityType = StartFragment.ID_TO_ACTIVITY[bundle.getInt(StartFragment.ACTIVITY_TYPE, 0)];
             inputType = StartFragment.ID_TO_INPUT[bundle.getInt(StartFragment.INPUT_TYPE, 0)];
-            mIntent.putExtras(bundle);
+            serviceIntent.putExtras(bundle);
         }
-        startService(mIntent);
+        startService(serviceIntent);
     }
 
 
@@ -153,6 +206,10 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     @Override
     public void onServiceConnected(ComponentName name, IBinder service) {
         trackingService =  ((TrackingService.TrackingBinder) service).getReference();
+        if(updateMap) {
+            getExerciseEntryFromService();
+            drawHistoryOnMap();
+        }
         Log.d("Testing", "Service connected");
     }
 
@@ -164,19 +221,20 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     @Override
     protected void onDestroy() {
+        if(!isHistory) {
+            // Destroy notification and tracking service
+            Log.d("Testing", "start destroy");
+            Intent intent = new Intent();
+            intent.setAction(TrackingService.ACTION);
+            intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
+            sendBroadcast(intent);
+            Log.d("Testing", "destroyed");
 
-        // Destroy notification and tracking service
-        Log.d("Testing", "start destroy");
-        Intent intent = new Intent();
-        intent.setAction(TrackingService.ACTION);
-        intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
-        sendBroadcast(intent);
-        Log.d("Testing", "destroyed");
-
-        // Destroy broadcast receiver
-        if(trackingService != null){
-            unbindService();
-            stopService(serviceIntent);
+            // Destroy broadcast receiver
+            if (trackingService != null) {
+                unbindService();
+                stopService(serviceIntent);
+            }
         }
 
         super.onDestroy();
@@ -189,40 +247,115 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
      * @param v
      */
     public void selectGPSSave(View v) {
+        saveEntryToDb();
+
         // Close the activity
         finish();
     }
+
 
     /**
      * Handle the selection of the cancel button
      * @param v
      */
     public void selectGPSCancel(View v) {
+
+        // Inform user that the profile information is discarded
+        Toast.makeText(getApplicationContext(), getString(R.string.ui_toast_cancel),
+                Toast.LENGTH_SHORT).show();
+
         // Close the activity
         finish();
     }
 
+    // To delete data entry
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        super.onCreateOptionsMenu(menu);
+        if(isHistory) {
+            menu.add(Menu.NONE, 0, 0, "DELETE").
+                    setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        }
+        return true;
+    }
+
+    // Perform the removal on a thread
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        runThread();
+        finish();
+        return true;
+    }
+
+    // Extracredit: use a background thread to delete information
+    private void runThread(){
+        new Thread(){
+            public void run(){
+                try {
+                    runOnUiThread(new Runnable() {
+
+                        @Override
+                        public void run() {
+                            MainActivity.DBhelper.removeEntry(rowId);
+                            HistoryFragment.adapter.notifyDataSetChanged();
+                        }
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }.start();
+    }
 
     /////////////////////// Updating location functionality ///////////////////////
 
-    public static LatLng fromLocationToLatLng(Location location){
-        return new LatLng(location.getLatitude(), location.getLongitude());
+    public void drawHistoryOnMap(){
+        // Get location list
+        ArrayList<LatLng> latLngList = entry.getmLocationList();
 
-    }
+        // Get start location
+        LatLng latlng = latLngList.get(0);
+        startLoc = mMap.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.defaultMarker(
+                BitmapDescriptorFactory.HUE_GREEN)));
 
-    private void updateWithNewLocation(Location location) {
-        updateStat();
+        // Animate if not drawn
+        if(notDrawn){
+            // Zoom in
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
+                    17));
+            notDrawn = false;
+        }
+
+        // Draw polyline
+        PolylineOptions polylineOptions = new PolylineOptions();
+        polylineOptions.color(Color.BLACK);
+        polylineOptions.width(5);
+        polylineOptions.addAll(latLngList);
+        mMap.addPolyline(polylineOptions);
+
+        // Draw the end marker
+        endLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(latLngList.size()-1))
+                .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+
     }
 
     public void drawTraceOnMap(){
 
-        if(entry.getmLocationList().size() == 1) {
+        if(entry.getmLocationList().size() == 1 && !updateMap) {
+
+            // Set input type and activity type
+            Bundle bundle = getIntent().getExtras();
+            entry.setmInputType(bundle.getInt(StartFragment.INPUT_TYPE,0));
+            entry.setmActivityType(bundle.getInt(StartFragment.ACTIVITY_TYPE, 0));
+
+            // Animate
             LatLng latlng = entry.getmLocationList().get(0);
             startLoc = mMap.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.defaultMarker(
                     BitmapDescriptorFactory.HUE_GREEN)));
             // Zoom in
             mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
                     17));
+            notDrawn = false;
         }else{
 
             // Draw polyline
@@ -256,37 +389,45 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     }
 
     public void saveEntryToDb(){
+        Log.d("Testing", "saving entry...");
+        entry.setmDuration(trackingService.getTimePassed());
 
+        // Execute writing to database
+        new WriteToDB().execute();
     }
 
     /**
      * Update stats on text views
      */
-    public  void updateStat(){
+    public void updateStat(){
+
+        // Get unit pref
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+        String unitPref = pref.getString(getString(R.string.unit_preference), getString(R.string.unit_km));
 
         // Set the text view for type
         TextView gpsType = (TextView) findViewById(R.id.gps_type);
-        gpsType.setText(formatType("Running")); // hardcoded for now
+        gpsType.setText(formatType(StartFragment.ID_TO_ACTIVITY[entry.getmActivityType()]));
 
         // Set the text view for average speed
         TextView gpsAvgSpeed = (TextView) findViewById(R.id.gps_avg_speed);
-        gpsAvgSpeed.setText(formatAvgSpeed(0.0,"Kilometers")); // hardcoded for now
+        gpsAvgSpeed.setText(formatAvgSpeed(entry.getmAvgSpeed(),unitPref)); // hardcoded for now
 
         // Set the text view for current speed
         TextView gpsCurSpeed = (TextView) findViewById(R.id.gps_cur_speed);
-        gpsCurSpeed.setText(formatCurSpeed(0.0, "Kilometers")); // hardcoded for now
+        gpsCurSpeed.setText(formatCurSpeed(currSpeed,unitPref)); // hardcoded for now
 
         // Set the text view for climb
         TextView gpsClimb = (TextView) findViewById(R.id.gps_climb);
-        gpsClimb.setText(formatClimb(0.0, "Kilometers")); // hardcoded for now
+        gpsClimb.setText(formatClimb(entry.getmClimb(),unitPref)); // hardcoded for now
 
         // Set the text view for calorie
         TextView gpsCalorie = (TextView) findViewById(R.id.gps_calories);
-        gpsCalorie.setText(formatCalories(0)); // hardcoded for now
+        gpsCalorie.setText(formatCalories(entry.getmCalorie())); // hardcoded for now
 
         // Set the text view for distance
         TextView gpsDistance = (TextView) findViewById(R.id.gps_distance);
-        gpsDistance.setText(formatDistance(0.0,"Kilometers")); // hardcoded for now
+        gpsDistance.setText(formatDistance(entry.getmDistance(),unitPref)); // hardcoded for now
     }
 
     /**
@@ -384,4 +525,29 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         mMap.addMarker(new MarkerOptions().position(new LatLng(0, 0)).title("Africa"));
         mMap.setMapType(GoogleMap.MAP_TYPE_NORMAL);
     }
+
+
+    /////////////////////// Use AsyncTask to write to database ///////////////////////
+
+    private class WriteToDB extends AsyncTask<Void, Integer, Void> {
+        private Long id;
+
+        @Override
+        protected Void doInBackground(Void... params) {
+            // Insert entry to database
+            id = MainActivity.DBhelper.insertEntry(entry);
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void result) {
+
+            HistoryFragment.adapter.notifyDataSetChanged();
+
+            // Inform user that the entry has been saved
+            Toast.makeText(getApplicationContext(), "Entry #" + id + " saved.",
+                    Toast.LENGTH_SHORT).show();
+        }
+    }
+
 }

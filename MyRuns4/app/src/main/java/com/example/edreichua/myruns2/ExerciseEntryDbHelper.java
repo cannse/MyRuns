@@ -6,8 +6,12 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
-import com.google.gson.*;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.sql.Blob;
 import java.util.ArrayList;
 
@@ -89,14 +93,14 @@ public class ExerciseEntryDbHelper extends SQLiteOpenHelper {
         values.put(KEY_DURATION,entry.getmDuration());
         values.put(KEY_DISTANCE,entry.getmDistance());
         //values.put(KEY_AVG_PACE,entry.getmAvgPace());
-        //values.put(KEY_AVG_SPEED,entry.getmAvgSpeed());
+        values.put(KEY_AVG_SPEED,entry.getmAvgSpeed());
         values.put(KEY_CALORIES,entry.getmCalorie());
-        //values.put(KEY_CLIMB,entry.getmClimb());
+        values.put(KEY_CLIMB,entry.getmClimb());
         values.put(KEY_HEARTRATE,entry.getmHeartRate());
         values.put(KEY_COMMENT,entry.getmComment());
 
         Gson gson = new Gson();
-        values.put(KEY_GPS_DATA,gson.toJson(entry.getmLocationList()));
+        values.put(KEY_GPS_DATA,gson.toJson(entry.getmLocationList()).getBytes());
 
         // Insert to database
         SQLiteDatabase database = getWritableDatabase();
@@ -175,6 +179,10 @@ public class ExerciseEntryDbHelper extends SQLiteOpenHelper {
         entry.setmClimb(cursor.getDouble(9));
         entry.setmHeartRate(cursor.getInt(10));
         entry.setmComment(cursor.getString(11));
+        Gson gson = new Gson();
+        String json = new String(cursor.getBlob(13));
+        Type type = new TypeToken<ArrayList<LatLng>>() {}.getType();
+        entry.setmLocationList((ArrayList<LatLng>)gson.fromJson(json, type));
 
         return entry;
     }

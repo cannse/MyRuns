@@ -23,9 +23,9 @@ public class StartFragment extends Fragment {
 
     // Different types of input
     public static final String INPUT_TYPE = "input_type";
-    private static final String MANUAL_ENTRY = "Manual Entry";
-    private static final String AUTOMATIC = "Automatic";
-    private static final String GPS = "GPS";
+    public static final String MANUAL_ENTRY = "Manual Entry";
+    public static final String AUTOMATIC = "Automatic";
+    public static final String GPS = "GPS";
 
     public static final Map<String,Integer> INPUT_TO_ID_MAP;
     static{

@@ -22,6 +22,9 @@ import android.util.Log;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Timer;
+import java.util.TimerTask;
 
 /**
  * Created by edreichua on 4/28/16.
@@ -45,6 +48,10 @@ public class TrackingService extends Service implements LocationListener {
     // Database
     private ExerciseEntry entry;
     private ArrayList<LatLng> locList;
+    private int activityType, inputType;
+    private Timer durationTimer;
+    private int timePassed;
+    private Location previousLoc;
 
 
     @Override
@@ -113,7 +120,6 @@ public class TrackingService extends Service implements LocationListener {
 
     @Override
     public IBinder onBind(Intent intent) {
-
         return trackingBinder;
     }
 
@@ -151,13 +157,35 @@ public class TrackingService extends Service implements LocationListener {
     }
 
     public void initExerciseEntry(){
+
+        // Set timePassed variable to increment every 1 second
+        timePassed = 0;
+        durationTimer = new Timer();
+        TimerTask timerTask = new TimerTask() {
+            @Override
+            public void run() {
+                timePassed++;
+            }
+        };
+        durationTimer.schedule(timerTask, 0, 1000);
+
+        // Set up Exercise entry
         entry = new ExerciseEntry();
         locList = new ArrayList<LatLng>();
         entry.setmLocationList(locList);
+        entry.setmDateTime(Calendar.getInstance().getTimeInMillis());
+        entry.setmDistance(0);
+        entry.setmDuration(0);
+        entry.setmCalorie(0);
+        entry.setmHeartRate(0);
     }
 
     public ExerciseEntry getExerciseEntry(){
         return entry;
+    }
+
+    public int getTimePassed(){
+        return timePassed;
     }
 
     public void startLocationUpdates(Location location){
@@ -168,6 +196,7 @@ public class TrackingService extends Service implements LocationListener {
             intent.setAction(MapDisplayActivity.ACTION);
             intent.putExtra(MapDisplayActivity.UPDATE_LOC_BROADCAST_KEY,
                     MapDisplayActivity.RQS_UPDATE_LOC);
+            intent.putExtra(MapDisplayActivity.CURR_SPEED,location.getSpeed());
             sendBroadcast(intent);
             Log.d("Testing", "sent broadcast");
         }
@@ -177,13 +206,49 @@ public class TrackingService extends Service implements LocationListener {
 
     }
 
-    public void onUpdate(){
+    public void onUpdate(Location location){
+
+        // Compare location and previousLocation (distance, climb)
+        if (location != null) {
+
+            double additionalDistance = 0;
+            double additionalClimb = 0;
+
+            if (previousLoc != null) {
+                // Update the additional distance traveled
+                additionalDistance = (double) location.distanceTo(previousLoc)/1000;
+
+                // Update the additional climb
+                if (location.getAltitude() > previousLoc.getAltitude())
+                    additionalClimb = location.getAltitude() - previousLoc.getAltitude();
+            }
+
+            previousLoc = location;
+
+            // Set parameters
+            entry.setmDistance(entry.getmDistance() + additionalDistance);
+            entry.setmClimb(entry.getmClimb() + additionalClimb);
+
+            Log.d("Testing", "additionalDistance = " + additionalDistance);
+            Log.d("Testing", "additionalClimb = " + additionalClimb);
+            Log.d("Testing", "entry total distance = " + entry.getmDistance());
+            Log.d("Testing", "entry total climb = " + entry.getmClimb());
+        }
+
+        double distance = entry.getmDistance();
+
+        if (distance > 0) {
+
+            // Update the average speed
+            entry.setmAvgSpeed(60*60*distance/timePassed);
+            Log.d("Testing", "entry avg speed (km/hr) = " + entry.getmAvgSpeed());
+
+            // Update the calories
+            entry.setmCalorie((int) (distance/15.0)); // TODO: this returns zero because int rounds it
+            Log.d("Testing", "entry total calories = " + entry.getmCalorie());
+        }
 
     }
-
-
-
-
 
     public void notifyChange(){
 
@@ -218,6 +283,7 @@ public class TrackingService extends Service implements LocationListener {
     public void onLocationChanged(Location location) {
         Log.d("Testing", "location change");
         startLocationUpdates(location);
+        onUpdate(location); // TODO: is this where we call onUpdate? Or elsewhere?
     }
 
     public void onProviderDisabled(String provider) {}
