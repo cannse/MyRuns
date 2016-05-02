@@ -12,7 +12,7 @@ public class ExerciseEntry {
     private int mInputType;        // Manual, GPS or automatic
     private int mActivityType;     // Running, cycling etc.
     private long mDateTime;        // When does this entry happen
-    private int mDuration;         // Exercise duration in seconds
+    private double mDuration;         // Exercise duration in seconds
     private double mDistance;      // Distance traveled. Either in meters or feet.
     private double mAvgPace;       // Average pace
     private double mAvgSpeed;      // Average speed
@@ -61,10 +61,10 @@ public class ExerciseEntry {
     }
 
     // Setter and Getter for Duration
-    public void setmDuration(int mDuration) {
+    public void setmDuration(double mDuration) {
         this.mDuration = mDuration;
     }
-    public int getmDuration() {
+    public double getmDuration() {
         return mDuration;
     }
 

@@ -62,6 +62,7 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
     public final static String ACTION = "NotifyLocationUpdate";
     public final static String UPDATE_LOC_BROADCAST_KEY="UpdateBroadcastKey";
     public final static int RQS_UPDATE_LOC = 1;
+    public final static int FIRST_LOC = 2;
     private UpdateLocationReceiver updateLocationReceiver;
     private boolean mIsBound;
 
@@ -95,9 +96,9 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
             updateMap = true;
         }
 
-        isHistory = bundle.getBoolean(HistoryFragment.FROM_HISTORY,false);
+        isHistory = bundle.getBoolean(HistoryFragment.FROM_HISTORY, false);
         rowId = bundle.getLong(HistoryFragment.ROW_INDEX, 0);
-        notDrawn = bundle.getBoolean(NOT_DRAWN,true);
+        notDrawn = bundle.getBoolean(NOT_DRAWN, true);
 
         if(!isHistory) {
             // Start service
@@ -138,15 +139,18 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         setUpMapIfNeeded();
 
         if(!isHistory) {
+            bindService();
             IntentFilter intentFilter = new IntentFilter();
             intentFilter.addAction(ACTION);
             registerReceiver(updateLocationReceiver, intentFilter);
+
         }
     }
 
     protected void onPause(){
         if(!isHistory) {
             unregisterReceiver(updateLocationReceiver);
+            unbindService();
         }
         super.onPause();
     }
@@ -158,11 +162,14 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         @Override
         public void onReceive(Context context, Intent intent) {
             if (trackingService != null ) {
+
+                int isFirst = intent.getIntExtra(UPDATE_LOC_BROADCAST_KEY, 0);
                 Log.d("Testing", "received");
                 getExerciseEntryFromService();
-                currSpeed = intent.getFloatExtra(CURR_SPEED,0);
-                drawTraceOnMap();
+                currSpeed = intent.getFloatExtra(CURR_SPEED, 0);
+                drawTraceOnMap(isFirst);
                 updateStat();
+
             }
         }
     }
@@ -208,34 +215,21 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         trackingService =  ((TrackingService.TrackingBinder) service).getReference();
         if(updateMap) {
             getExerciseEntryFromService();
-            drawHistoryOnMap();
         }
         Log.d("Testing", "Service connected");
     }
 
     @Override
     public void onServiceDisconnected(ComponentName name) {
-        stopService(serviceIntent);
+        Log.d("Testing", "Service disconnected");
         trackingService = null;
     }
 
+
     @Override
     protected void onDestroy() {
-        if(!isHistory) {
-            // Destroy notification and tracking service
-            Log.d("Testing", "start destroy");
-            Intent intent = new Intent();
-            intent.setAction(TrackingService.ACTION);
-            intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
-            sendBroadcast(intent);
-            Log.d("Testing", "destroyed");
-
-            // Destroy broadcast receiver
-            if (trackingService != null) {
-                unbindService();
-                stopService(serviceIntent);
-            }
-        }
+        if(isFinishing())
+            exitHelper();
 
         super.onDestroy();
     }
@@ -250,6 +244,7 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         saveEntryToDb();
 
         // Close the activity
+        exitHelper();
         finish();
     }
 
@@ -265,7 +260,31 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
                 Toast.LENGTH_SHORT).show();
 
         // Close the activity
+        exitHelper();
         finish();
+    }
+
+    @Override
+    public void onBackPressed(){
+        exitHelper();
+        super.onBackPressed();
+    }
+
+    private void exitHelper(){
+        if(!isHistory) {
+            // Destroy broadcast receiver
+            if (trackingService != null) {
+                // Destroy notification and tracking service
+                Log.d("Testing", "start destroy");
+                Intent intent = new Intent();
+                intent.setAction(TrackingService.ACTION);
+                intent.putExtra(TrackingService.STOP_SERVICE_BROADCAST_KEY, TrackingService.RQS_STOP_SERVICE);
+                sendBroadcast(intent);
+                Log.d("Testing", "destroyed");
+                unbindService();
+                stopService(serviceIntent);
+            }
+        }
     }
 
     // To delete data entry
@@ -329,7 +348,7 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
         // Draw polyline
         PolylineOptions polylineOptions = new PolylineOptions();
         polylineOptions.color(Color.BLACK);
-        polylineOptions.width(5);
+        polylineOptions.width(7);
         polylineOptions.addAll(latLngList);
         mMap.addPolyline(polylineOptions);
 
@@ -339,39 +358,47 @@ public class MapDisplayActivity extends FragmentActivity implements ServiceConne
 
     }
 
-    public void drawTraceOnMap(){
+    public void drawTraceOnMap(int isFirst){
 
-        if(entry.getmLocationList().size() == 1 && !updateMap) {
+        if(isFirst == FIRST_LOC) {
 
             // Set input type and activity type
             Bundle bundle = getIntent().getExtras();
             entry.setmInputType(bundle.getInt(StartFragment.INPUT_TYPE,0));
             entry.setmActivityType(bundle.getInt(StartFragment.ACTIVITY_TYPE, 0));
 
-            // Animate
-            LatLng latlng = entry.getmLocationList().get(0);
-            startLoc = mMap.addMarker(new MarkerOptions().position(latlng).icon(BitmapDescriptorFactory.defaultMarker(
+            // Draw the start marker
+            ArrayList<LatLng> latLngList = entry.getmLocationList();
+            startLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(0)).icon(BitmapDescriptorFactory.defaultMarker(
                     BitmapDescriptorFactory.HUE_GREEN)));
+
+            // Draw the end marker
+            endLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(latLngList.size()-1))
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+
             // Zoom in
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latlng,
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLngList.get(0),
                     17));
-            notDrawn = false;
+
+            entry.getmLocationList().remove(0);
+
         }else{
+
+            // Get the start marker
+            ArrayList<LatLng> latLngList = entry.getmLocationList();
+            startLoc.remove();
+            startLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(0)).icon(BitmapDescriptorFactory.defaultMarker(
+                    BitmapDescriptorFactory.HUE_GREEN)));
 
             // Draw polyline
             PolylineOptions polylineOptions = new PolylineOptions();
             polylineOptions.color(Color.BLACK);
-            polylineOptions.width(5);
-            ArrayList<LatLng> latLngList = entry.getmLocationList();
+            polylineOptions.width(7);
             polylineOptions.addAll(latLngList);
             mMap.addPolyline(polylineOptions);
 
-            // Remove the end marker
-            if(endLoc != null){
-                endLoc.remove();
-            }
-
             // Draw the end marker
+            endLoc.remove();
             endLoc = mMap.addMarker(new MarkerOptions().position(latLngList.get(latLngList.size()-1))
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
         }

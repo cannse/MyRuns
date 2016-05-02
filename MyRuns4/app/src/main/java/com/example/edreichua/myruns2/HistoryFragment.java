@@ -234,9 +234,9 @@ public class HistoryFragment extends ListFragment implements
     }
 
     // Convert the duration from seconds to the proper format
-    public static String formatDuration(int duration) {
-        int minutes = duration/60;
-        int seconds = duration%60;
+    public static String formatDuration(double duration) {
+        int minutes = (int)(duration/60);
+        int seconds = (int)(duration%60);
         if (minutes == 0 && seconds == 0) return "0secs";
         return String.valueOf(minutes) + "min " + String.valueOf(seconds) + "secs";
     }

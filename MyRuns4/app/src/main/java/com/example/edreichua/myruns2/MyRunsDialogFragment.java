@@ -128,7 +128,7 @@ public class MyRunsDialogFragment extends DialogFragment {
         // Use an EditText view to get user input
         final EditText input = new EditText(parent);
 
-        if(id == DISTANCE_PICKER_ID) {
+        if(id == DISTANCE_PICKER_ID || id == DURATION_PICKER_ID) {
             input.setInputType(InputType.TYPE_CLASS_NUMBER |
                     InputType.TYPE_NUMBER_FLAG_DECIMAL | InputType.TYPE_NUMBER_FLAG_SIGNED);
         }else if (id == COMMENT_PICKER_ID) {
@@ -149,7 +149,7 @@ public class MyRunsDialogFragment extends DialogFragment {
 
                 switch (title) {
                     case "Duration":
-                        int valueInSeconds = Integer.parseInt(value)*60;
+                        double valueInSeconds = Double.parseDouble(value)*60;
                         ((ManualEntryActivity) parent).entry.
                                 setmDuration(!value.equals("") ? valueInSeconds : 0);
                         break;

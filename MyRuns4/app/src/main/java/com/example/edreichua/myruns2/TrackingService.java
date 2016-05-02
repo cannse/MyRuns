@@ -91,7 +91,7 @@ public class TrackingService extends Service implements LocationListener {
         mHandler.postDelayed(new Runnable() {
             public void run() {
                 Location l = locationManager.getLastKnownLocation(provider);
-                startLocationUpdates(l);
+                startLocationUpdates(l,true);
             }
         }, 1);
 
@@ -128,6 +128,7 @@ public class TrackingService extends Service implements LocationListener {
         locationManager.removeUpdates(this);
         this.unregisterReceiver(notifyServiceReceiver);
         isRunning = false;
+        Log.d("Testing","Tracking service destroyed");
         super.onDestroy();
     }
 
@@ -188,14 +189,20 @@ public class TrackingService extends Service implements LocationListener {
         return timePassed;
     }
 
-    public void startLocationUpdates(Location location){
+    public void startLocationUpdates(Location location, boolean isFirst){
         if (location != null) {
             LatLng mLatLng = fromLocationToLatLng(location);
             entry.addmLocationList(mLatLng);
             Intent intent = new Intent();
             intent.setAction(MapDisplayActivity.ACTION);
-            intent.putExtra(MapDisplayActivity.UPDATE_LOC_BROADCAST_KEY,
-                    MapDisplayActivity.RQS_UPDATE_LOC);
+            if(isFirst){
+                intent.putExtra(MapDisplayActivity.UPDATE_LOC_BROADCAST_KEY,
+                        MapDisplayActivity.FIRST_LOC);
+            }else {
+                onUpdate(location);
+                intent.putExtra(MapDisplayActivity.UPDATE_LOC_BROADCAST_KEY,
+                        MapDisplayActivity.RQS_UPDATE_LOC);
+            }
             intent.putExtra(MapDisplayActivity.CURR_SPEED,location.getSpeed());
             sendBroadcast(intent);
             Log.d("Testing", "sent broadcast");
@@ -215,12 +222,12 @@ public class TrackingService extends Service implements LocationListener {
             double additionalClimb = 0;
 
             if (previousLoc != null) {
+
                 // Update the additional distance traveled
-                additionalDistance = (double) location.distanceTo(previousLoc)/1000;
+                additionalDistance = (double) location.distanceTo(previousLoc) / 1000;
 
                 // Update the additional climb
-                if (location.getAltitude() > previousLoc.getAltitude())
-                    additionalClimb = location.getAltitude() - previousLoc.getAltitude();
+                additionalClimb = location.getAltitude() - previousLoc.getAltitude();
             }
 
             previousLoc = location;
@@ -244,7 +251,7 @@ public class TrackingService extends Service implements LocationListener {
             Log.d("Testing", "entry avg speed (km/hr) = " + entry.getmAvgSpeed());
 
             // Update the calories
-            entry.setmCalorie((int) (distance/15.0)); // TODO: this returns zero because int rounds it
+            entry.setmCalorie((int) ((distance*ManualEntryActivity.MILES2KM)/15.0));
             Log.d("Testing", "entry total calories = " + entry.getmCalorie());
         }
 
@@ -266,7 +273,6 @@ public class TrackingService extends Service implements LocationListener {
             int req = intent.getIntExtra(STOP_SERVICE_BROADCAST_KEY, 0);
             if (req == RQS_STOP_SERVICE){
                 Log.d("Testing", "service stopped");
-                stopSelf();
                 ((NotificationManager) getSystemService(NOTIFICATION_SERVICE))
                         .cancelAll();
             }
@@ -282,8 +288,7 @@ public class TrackingService extends Service implements LocationListener {
 
     public void onLocationChanged(Location location) {
         Log.d("Testing", "location change");
-        startLocationUpdates(location);
-        onUpdate(location); // TODO: is this where we call onUpdate? Or elsewhere?
+        startLocationUpdates(location,false);
     }
 
     public void onProviderDisabled(String provider) {}

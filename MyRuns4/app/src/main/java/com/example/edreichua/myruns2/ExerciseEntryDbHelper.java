@@ -49,7 +49,7 @@ public class ExerciseEntryDbHelper extends SQLiteOpenHelper {
             + KEY_INPUT_TYPE + " INTEGER NOT NULL, "
             + KEY_ACTIVITY_TYPE + " INTEGER NOT NULL, "
             + KEY_DATE_TIME + " DATETIME NOT NULL, "
-            + KEY_DURATION + " INTEGER NOT NULL, "
+            + KEY_DURATION + " FLOAT, "
             + KEY_DISTANCE + " FLOAT, "
             + KEY_AVG_PACE + " FLOAT, "
             + KEY_AVG_SPEED + " FLOAT,"
